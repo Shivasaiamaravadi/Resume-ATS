@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback } from 'react';
 import { jsPDF } from 'jspdf';
 import * as docx from 'docx';
@@ -197,8 +198,11 @@ export const AnalysisResults: React.FC<AnalysisResultsProps> = ({ result, onRese
       styles: {
         paragraphStyles: [
             { id: "normal", name: "Normal", run: { font: "Calibri", size: 22 } },
-            { id: "contact", name: "Contact", basedOn: "normal", run: { size: 20 }, alignment: docx.AlignmentType.CENTER },
-            { id: "sectionHeading", name: "Section Heading", basedOn: "normal", run: { bold: true, size: 24, allCaps: true }, border: { bottom: { color: "auto", space: 1, value: "single", size: 6 } }, spacing: { before: 240, after: 120 } },
+            // FIX: The 'alignment' property should be nested inside a 'paragraph' object for paragraph styles.
+            { id: "contact", name: "Contact", basedOn: "normal", run: { size: 20 }, paragraph: { alignment: docx.AlignmentType.CENTER } },
+            // FIX: The 'border' and 'spacing' properties should be nested inside a 'paragraph' object for paragraph styles.
+            // FIX: The property for border style is 'style', not 'value'.
+            { id: "sectionHeading", name: "Section Heading", basedOn: "normal", run: { bold: true, size: 24, allCaps: true }, paragraph: { border: { bottom: { color: "auto", space: 1, style: "single", size: 6 } }, spacing: { before: 240, after: 120 } } },
             { id: "jobTitle", name: "Job Title", basedOn: "normal", run: { bold: true } },
             { id: "company", name: "Company", basedOn: "normal", run: { italics: true } },
         ]
@@ -252,7 +256,8 @@ export const AnalysisResults: React.FC<AnalysisResultsProps> = ({ result, onRese
               style: 'jobTitle',
             }),
             new docx.Paragraph({ text: `${exp.company} | ${exp.location || ''}`, style: 'company' }),
-            ...exp.achievements.map(ach => new docx.Paragraph({ text: ach, bullet: { level: 0 }, style: 'normal', indentation: { left: 720 } })),
+            // FIX: The property for indentation is 'indent', not 'indentation'.
+            ...exp.achievements.map(ach => new docx.Paragraph({ text: ach, bullet: { level: 0 }, style: 'normal', indent: { left: 720 } })),
             new docx.Paragraph({ text: "" }), // Spacer
           ]),
           
@@ -264,95 +269,72 @@ export const AnalysisResults: React.FC<AnalysisResultsProps> = ({ result, onRese
                 new docx.TextRun({ text: edu.degree, bold: true }),
                 new docx.TextRun({ text: `\t${edu.graduationDate || ''}` }),
               ],
-               style: 'jobTitle',
+              style: 'jobTitle',
             }),
             new docx.Paragraph({ text: `${edu.institution} | ${edu.location || ''}`, style: 'company' }),
+            new docx.Paragraph({ text: "" }),
           ]),
         ],
       }],
     });
-
+    
     docx.Packer.toBlob(doc).then(blob => {
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'Revised_Resume.docx';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'Revised_Resume.docx';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
     });
 
   }, [result.revisedResume]);
 
-
   return (
-    <div className="animate-fade-in space-y-8">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h2 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">Your Resume Analysis is Ready</h2>
-        <div className="flex gap-4 flex-shrink-0 flex-wrap">
-          <button
-            onClick={handleDownloadPdf}
-            className="px-6 py-2 bg-green-600 text-white font-semibold rounded-lg shadow-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-200"
-          >
-            Download PDF
-          </button>
-          <button
-            onClick={handleDownloadDocx}
-            className="px-6 py-2 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
-          >
-            Download DOCX
-          </button>
-          <button
-            onClick={handleCopy}
-            className="px-6 py-2 bg-slate-600 text-white font-semibold rounded-lg shadow-md hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 transition-colors duration-200"
-          >
-            {copyButtonText}
-          </button>
-          <button
-            onClick={onReset}
-            className="px-6 py-2 bg-indigo-600 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200"
-          >
-            Revise Another
-          </button>
-        </div>
+    <div className="space-y-8">
+      <div className="flex flex-col sm:flex-row justify-between items-center gap-4 p-4 bg-white rounded-xl shadow-lg border border-slate-200">
+        <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">Your Resume Analysis is Complete!</h2>
+        <button
+          onClick={onReset}
+          className="px-6 py-2 bg-slate-600 text-white font-semibold rounded-lg shadow-md hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 transition-colors"
+        >
+          Revise Another
+        </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left Column for Scores and Feedback */}
-        <div className="lg:col-span-1 flex flex-col gap-8">
-          <ResultCard title="ATS Score Comparison">
-            <div className="flex justify-around items-center text-center p-4">
-              <div>
-                <ScoreDonut score={result.originalAtsScore} />
-                <p className="mt-2 font-semibold text-slate-600">Original Score</p>
-              </div>
-              <div className="text-3xl text-slate-300">&rarr;</div>
-              <div>
-                <ScoreDonut score={result.revisedAtsScore} />
-                <p className="mt-2 font-semibold text-slate-600">Revised Score</p>
-              </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <ResultCard title="ATS Score Improvement">
+          <div className="flex justify-around items-center text-center">
+            <div>
+              <h4 className="text-lg font-semibold text-slate-600 mb-2">Original Score</h4>
+              <ScoreDonut score={result.originalAtsScore} />
             </div>
-          </ResultCard>
-          <ResultCard title="Key Improvements">
-            <ul className="list-disc list-inside space-y-2 text-slate-600">
-                {result.feedback.split('*').filter(item => item.trim()).map((item, index) => (
-                    <li key={index}>{item.trim()}</li>
-                ))}
-            </ul>
-          </ResultCard>
-        </div>
-
-        {/* Right Column for Revised Resume */}
-        <div className="lg:col-span-2">
-            <div className="bg-white p-6 sm:p-8 rounded-xl shadow-lg border border-slate-200 h-full">
-                <h3 className="text-xl font-bold text-slate-800 mb-4 pb-2 border-b border-slate-200">Optimized Resume Text</h3>
-                <pre className="whitespace-pre-wrap break-words font-sans text-slate-700 text-base leading-relaxed max-h-[80vh] overflow-y-auto">
-                    {revisedResumeText}
-                </pre>
+            <div className="text-4xl text-slate-400">&rarr;</div>
+            <div>
+              <h4 className="text-lg font-semibold text-slate-600 mb-2">Revised Score</h4>
+              <ScoreDonut score={result.revisedAtsScore} />
             </div>
-        </div>
+          </div>
+        </ResultCard>
+        <ResultCard title="Key Revisions & Feedback">
+            <div 
+              className="prose prose-slate max-w-none prose-ul:list-disc prose-ul:pl-5"
+              dangerouslySetInnerHTML={{ __html: `<ul>${result.feedback.split('\n').filter(line => line.trim().startsWith('*')).map(line => line.replace(/^\* /, '<li>') + '</li>').join('')}</ul>` }}
+            />
+        </ResultCard>
       </div>
+
+      <ResultCard title="Revised Resume (ATS Optimized)">
+        <div className="flex justify-end gap-2 mb-4">
+            <button onClick={handleCopy} className="px-4 py-2 text-sm bg-slate-100 text-slate-700 font-semibold rounded-md hover:bg-slate-200 transition-colors">{copyButtonText}</button>
+            <button onClick={handleDownloadPdf} className="px-4 py-2 text-sm bg-blue-100 text-blue-700 font-semibold rounded-md hover:bg-blue-200 transition-colors">Download PDF</button>
+            <button onClick={handleDownloadDocx} className="px-4 py-2 text-sm bg-green-100 text-green-700 font-semibold rounded-md hover:bg-green-200 transition-colors">Download DOCX</button>
+        </div>
+        <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 h-96 overflow-y-auto">
+          <pre className="whitespace-pre-wrap text-sm font-mono">{revisedResumeText}</pre>
+        </div>
+      </ResultCard>
     </div>
   );
 };
